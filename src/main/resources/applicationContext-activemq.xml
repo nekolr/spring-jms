@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- ActiveMQ ConnectionFactory -->
+    <!--<amq:connectionFactory id="activeMQConnectionFactory" brokerURL="tcp://localhost:61616"
+    userName="admin" password="admin"></amq:connectionFactory>-->
+
+    <!--
+        #################################### ActiveMQ ConnectionFactory ####################################
+    -->
+    <bean id="activeMQConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+        <property name="brokerURL" value="tcp://localhost:61616"></property>
+        <property name="userName" value="admin"></property>
+        <property name="password" value="admin"></property>
+    </bean>
+
+
+    <!--
+        #################################### Spring ConnectionFactory ####################################
+        CachingConnectionFactory 继承了 SingleConnectionFactory，增加了缓存功能，能够缓存 Session/Consumer/Producer
+    -->
+    <bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+        <!-- 可以使用通过构造器注入 -->
+        <!--<constructor-arg ref="activeMQConnectionFactory"></constructor-arg>-->
+        <property name="targetConnectionFactory" ref="activeMQConnectionFactory"></property>
+        <property name="sessionCacheSize" value="200"></property>
+    </bean>
+
+
+    <!--
+        #################################### Destination ####################################
+    -->
+    <!-- PTP Destination -->
+    <bean id="defaultQueueDestination" class="org.apache.activemq.command.ActiveMQQueue">
+        <property name="physicalName" value="org.apache.activemq.test.defaultQueue"></property>
+    </bean>
+
+    <!-- Pub/Sub Destination -->
+    <bean id="defaultTopicDestination" class="org.apache.activemq.command.ActiveMQTopic">
+        <property name="physicalName" value="org.apache.activemq.test.defaultTopic"></property>
+    </bean>
+
+    <!--
+        #################################### 生产者 Spring JmsTemplate ####################################
+    -->
+
+    <!-- PTP -->
+    <bean id="jmsQueueTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="connectionFactory"></property>
+        <!-- 非pub/sub模型（发布/订阅），即队列模式 -->
+        <property name="pubSubDomain" value="false"></property>
+    </bean>
+
+    <!-- Pub/Sub -->
+    <bean id="jmsTopicTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="connectionFactory"></property>
+        <!-- pub/sub模型（发布/订阅） -->
+        <property name="pubSubDomain" value="true"></property>
+    </bean>
+
+    <!--
+        #################################### 消费者 Spring Listener ####################################
+    -->
+
+    <!-- 自定义 Message Listener -->
+    <bean id="defaultMessageListener" class="com.nekolr.jms.listener.DefaultMessageListener"></bean>
+
+    <!-- JMS Listener Container -->
+    <bean id="jmsListenerContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+        <property name="connectionFactory" ref="connectionFactory"></property>
+        <!-- 默认使用PTP传送模型 -->
+        <property name="destination" ref="defaultQueueDestination"></property>
+        <property name="messageListener" ref="defaultMessageListener"></property>
+        <property name="sessionTransacted" value="true"></property>
+    </bean>
+
+</beans>
